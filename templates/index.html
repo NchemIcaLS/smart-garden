@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+
+<head>
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="../static/style.css/">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-+0n0xVW2eSR5OomGNYDnhzAbDsOXxcvSN1TPprVMTNDbiYZCxYbOOl7+AMvyTG2x" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/js/bootstrap.bundle.min.js" integrity="sha384-gtEjrD/SeCtmISkJkNUaaKMoLD0//ElJ19smozuHV6z3Iehds+3Ulb9Bn9Plx0x4" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.3"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@0.1.1"></script>
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-success">
+        <div class="container-fluid">
+          <a class="navbar-brand" href="#">Smart Garden</a>
+        </div>
+    </nav>
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+            <h1 class="h2">Dashboard</h1>
+            <div class="btn-toolbar mb-2 mb-md-0">
+                <div class="btn-group me-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary">Share</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary">Export</button>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <h4>Current Readings</h4>
+                <table class="table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Sensor</th>
+                        <th scope="col">Value</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <th scope="row">Time</th>
+                        <td>{{ time }}</td>
+                      </tr>
+                      <tr>
+                        <th scope="row">Temperature</th>
+                        <td>{{ temperature }} &deg;C</td>
+                      </tr>
+                      <tr>
+                        <th scope="row">Humidity</th>
+                        <td>{{ humidity }}</td>
+                      </tr>
+                      <tr>
+                        <th scope="row">Light Visible</th>
+                        <td>{{ light_visible }}</td>
+                      </tr>
+                      <tr>
+                        <th scope="row">Light IR</th>
+                        <td>{{ light_ir }}</td>
+                      </tr>
+                      <tr>
+                        <th scope="row">UV Index</th>
+                        <td>{{ light_uv }}</td>
+                      </tr>
+                      <tr>
+                        <th scope="row">Moisture</th>
+                        <td>{{ moisture }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                <h4>Water Controls</h4>
+                <div>
+                    <p>TODO: In progress</p>
+                    <div class="btn-group d-flex" role="group" aria-label="Basic example">
+                        <button type="button" class="btn btn-primary w-100">Ch1</button>
+                        <button type="button" class="btn btn-primary w-100">Ch2</button>
+                        <button type="button" class="btn btn-primary w-100">Ch3</button>
+                        <button type="button" class="btn btn-primary w-100">Ch4</button>
+
+                    </div>
+                </div>
+                <!-- <a class="button" href="{{ url_for('water_on', channel=4) }}">Start Water</a>
+                <a class="button" href="{{ url_for('water_off', channel=4) }}">Stop Water</a> -->
+            </div>
+            <div class="col">
+                <h4>Historical Data</h4>
+                <canvas id="temperatureCanvas"></canvas>
+                <br />
+                <canvas id="lightCanvas"></canvas>
+                <br />
+                <canvas id="moistureCanvas"></canvas>
+                <br />
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
+
+<script>
+    var temperatureCtx = document.getElementById('temperatureCanvas').getContext('2d');
+    var lightCtx = document.getElementById('lightCanvas').getContext('2d');
+    var moistureCtx = document.getElementById('moistureCanvas').getContext('2d');
+
+    var temperatureChart = new Chart(temperatureCtx, {
+        type: 'line',
+        data: {
+            labels: {{ data_timestamps|safe }},
+            datasets: [
+                {
+                    label: 'Temperature [deg C]',
+                    data: {{ data_temperature|safe }},
+                    yAxisID: 'temp',
+                    fill: false,
+                    backgroundColor: '#dc3545',
+                    borderColor: '#dc3545',
+                },
+                {
+                    label: 'Humidity',
+                    data: {{ data_humidity|safe }},
+                    yAxisID: 'humid',
+                    fill: false,
+                    backgroundColor: '#fd7e14',
+                    borderColor: '#fd7e14',
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            animation: false,
+            parsing: false,
+            normalized: true,
+            scales: {
+                xAxes: [{
+                    type: 'time',
+                    ticks: {
+                        maxTicksLimit: 15
+                    }
+                }],
+                yAxes: [
+                    {
+                        id: 'temp',
+                        position: 'left',
+                        ticks: {
+                            min: 18,
+                            max: 28
+                        },
+                    },
+                    {
+                        id: 'humid',
+                        position: 'left',
+                        ticks: {
+                            min: 35,
+                            max: 70
+                        },
+                        gridLines: {
+                            drawOnChartArea: false
+                        }
+                    }
+                ]
+            }
+        }
+    });
+
+    var lightChart = new Chart(lightCtx, {
+        type: 'line',
+        data: {
+            labels: {{ data_timestamps|safe }},
+            datasets: [
+                {
+                    label: 'Visible',
+                    data: {{ data_light_visible|safe }},
+                    yAxisID: 'lumens',
+                    fill: false,
+                    backgroundColor: '#0d6efd',
+                    borderColor: '#0d6efd',
+                },
+                {
+                    label: 'IR',
+                    data: {{ data_light_ir|safe }},
+                    yAxisID: 'lumens',
+                    fill: false,
+                    backgroundColor: '#dc3545',
+                    borderColor: '#dc3545',
+                },
+                {
+                    label: 'UV Index',
+                    data: {{ data_light_uv|safe }},
+                    yAxisID: 'index',
+                    fill: false,
+                    backgroundColor: '#6610f2',
+                    borderColor: '#6610f2',
+                },
+            ]
+        },
+        options: {
+            responsive: true,
+            animation: false,
+            parsing: false,
+            normalized: true,
+            scales: {
+                xAxes: [{
+                    type: 'time',
+                    ticks: {
+                        maxTicksLimit: 15
+                    }
+                }],
+                yAxes: [
+                    {
+                        id: 'lumens',
+                        position: 'left',
+                        ticks: {
+                            min: 250,
+                            max: 1800
+                        },
+                    },
+                    {
+                        id: 'index',
+                        position: 'left',
+                        ticks: {
+                            min: 0,
+                            max: 10
+                        },
+                        gridLines: {
+                            drawOnChartArea: false
+                        }
+                    }
+                ]
+            }
+        }
+    });
+
+    var moistureChart = new Chart(moistureCtx, {
+        type: 'line',
+        data: {
+            labels: {{ data_timestamps|safe }},
+            datasets: [
+                {
+                    label: 'Moisture 1',
+                    data: {{ data_moisture_1|safe }},
+                    fill: false,
+                    backgroundColor: '#a3cfbb',
+                    borderColor: '#a3cfbb',
+                },
+                {
+                    label: 'Moisture 2',
+                    data: {{ data_moisture_2|safe }},
+                    fill: false,
+                    backgroundColor: '#479f76',
+                    borderColor: '#479f76',
+                },
+                {
+                    label: 'Moisture 3',
+                    data: {{ data_moisture_3|safe }},
+                    fill: false,
+                    backgroundColor: '#146c43',
+                    borderColor: '#146c43',
+                },
+                {
+                    label: 'Moisture 4',
+                    data: {{ data_moisture_4|safe }},
+                    fill: false,
+                    backgroundColor: '#0a3622',
+                    borderColor: '#0a3622',
+                },
+            ]
+        },
+        options: {
+            responsive: true,
+            animation: false,
+            parsing: false,
+            normalized: true,
+            scales: {
+                xAxes: [{
+                    type: 'time',
+                    ticks: {
+                        maxTicksLimit: 15
+                    }
+                }],
+                yAxes: [
+                    {
+                        ticks: {
+                            min: 1200,
+                            max: 1800
+                        },
+                    }
+                ]
+            }
+        }
+    });
+</script>
