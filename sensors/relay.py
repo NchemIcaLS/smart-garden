@@ -63,7 +63,7 @@ class Grove4chRelay(object):
             read_data = self.bus.read_byte_data(self.addr, Reg)
         except OSError:
             raise OSError(
-                "Please check if the I2C device insert in I2C of Base Hat")
+                "Relay read error to I2C device.")
         return read_data
 
     # Write 8 bit data to Reg
@@ -72,7 +72,7 @@ class Grove4chRelay(object):
             self.bus.write_byte_data(self.addr, Reg, Value)
         except OSError:
             raise OSError(
-                "Please check if the I2C device insert in I2C of Base Hat")
+                "Relay write error to I2C device.")
 
     # read 16 bit data from Reg
     def _ReadHalfWord(self, Reg):
@@ -87,7 +87,7 @@ class Grove4chRelay(object):
 
 def main():
 
-    relay = Grove_4ch_relay()
+    relay = Grove4chRelay()
     fwv = relay.getFirmwareVersion()
     print(f"Firmeware Version: {fwv}")
 
