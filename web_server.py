@@ -8,13 +8,13 @@ from flask import Flask, render_template, redirect, request
 app = Flask(__name__)
 
 # Define moisture sensor and channel pairings
-# (name, channel, moisture_sensor)
+# (name, channel, moisture_sensor, moisture_level)
 # sorted by moisture sensor
 plants = [
-    ("tomato",  2, 0),
-    ("oregano", 3, 1),
-    ("basil-1", 1, 2),
-    ("basil-2", 4, 3),
+    ("tomato",  2, 0, 1400),
+    ("oregano", 3, 1, 1700),
+    ("basil-1", 1, 2, 1550),
+    ("basil-2", 4, 3, 1550),
 ]
 
 # Sensors
@@ -43,6 +43,29 @@ def button():
     button.on_release = on_release
 
 ###
+# Database
+###
+
+
+con = sqlite3.connect('database.sqlite', detect_types=sqlite3.PARSE_DECLTYPES, check_same_thread=False)
+cur = con.cursor()
+
+
+def fetch_data(sensor_id):
+    cur.execute(
+        f"SELECT timestamp, value FROM data WHERE sensor_id = {sensor_id} ORDER BY timestamp")
+    res = cur.fetchall()
+
+    timestamps = []
+    values = []
+    for timestamp, value in res:
+        timestamps.append(str(timestamp)[:19])
+        values.append(value)
+
+    return timestamps, values
+
+
+###
 # Routes
 ###
 
@@ -57,23 +80,6 @@ def index():
     light_uv = SI1145.ReadUV / 100
     light_ir = SI1145.ReadIR
     moisture = [sensor.moisture for sensor in moisture_sensors]
-
-    con = sqlite3.connect(
-        'database.sqlite', detect_types=sqlite3.PARSE_DECLTYPES)
-    cur = con.cursor()
-
-    def fetch_data(sensor_id):
-        cur.execute(
-            f"SELECT timestamp, value FROM data WHERE sensor_id = {sensor_id} ORDER BY timestamp")
-        res = cur.fetchall()
-
-        timestamps = []
-        values = []
-        for timestamp, value in res:
-            timestamps.append(str(timestamp)[:19])
-            values.append(value)
-
-        return timestamps, values
 
     templateData = {
         'time': timeString,
@@ -127,9 +133,10 @@ def automatic():
     for plant in plants:
         channel = plant[1]
         sensor = moisture_sensors[plant[2]]
-        if sensor.moisture > 1600:
+        moisture_level = plant[3]
+        if sensor.moisture > moisture_level:
             relay.turn_on(channel)
-            while sensor.moisture > 1600:
+            while sensor.moisture > moisture_level:
                 time.sleep(1)
             relay.turn_off(channel)
     return redirect('/')

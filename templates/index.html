@@ -81,10 +81,10 @@
                         {%for plant in plants%}
                         <div class="my-3">
                             <div>Water {{ plant[0] }}</div>
-                            <div>Moisture level: {{ moisture[plant[2]] }}</div>
+                            <div>Moisture: {{ moisture[plant[2]] }} / {{ plant[3] }}</div>
                             <div class="btn-group d-flex my-2" role="group" aria-label="Basic example">
-                                <a class="btn btn-success" role="button" href="{{ url_for('channel_on', channel=plant[1]) }}">On</a>
-                                <a class="btn btn-danger" role="button" href="{{ url_for('channel_off', channel=plant[1]) }}">Off</a>
+                                <a class="btn btn-success {{'disabled' if relay_state[plant[1] - 1] == 1 }}" role="button" href="{{ url_for('channel_on', channel=plant[1]) }}">On</a>
+                                <a class="btn btn-danger {{'disabled' if relay_state[plant[1] - 1] == 0 }}" role="button" href="{{ url_for('channel_off', channel=plant[1]) }}">Off</a>
                             </div>
                         </div>
                         {%endfor%}
