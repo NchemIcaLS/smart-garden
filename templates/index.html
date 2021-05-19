@@ -73,9 +73,19 @@
                     <p>Current State: {{ relay_state }}</p>
                     <div>
                         <h5>Automatic</h5>
-                        <p>Based on moisture sensors.</p>
                         <div class="mb-4">
-                            <a class="btn btn-success w-100" role="button" href="{{ url_for('automatic') }}">Automatic</a>
+                            <div class="mb-2">
+                                <a class="btn btn-success w-100 {{'active' if strategy == 0 }}" role="button" href="{{ url_for('set_strategy', strategy_id=0) }}">None</a>
+                                <small class="text-muted">No automatic watering.</small>
+                            </div>
+                            <div class="mb-2">
+                                <a class="btn btn-success w-100 {{'active' if strategy == 1 }}" role="button" href="{{ url_for('set_strategy', strategy_id=1) }}">Time</a>
+                                <small class="text-muted">Water all plants for 5 seconds every other day at 6 AM.</small>
+                            </div>
+                            <div class="mb-2">
+                                <a class="btn btn-success w-100 {{'active' if strategy == 2 }}" role="button" href="{{ url_for('set_strategy', strategy_id=2) }}">Moisture</a>
+                                <small class="text-muted">Water each plant based on set moisture level.</small>
+                            </div>
                         </div>
                         <h5>Manual Controls</h5>
                         {%for plant in plants%}

@@ -3,7 +3,7 @@ import time
 import threading
 from datetime import datetime
 from sensors import GroveMoistureSensor, GroveHumidityTemperatureSensor, GroveLightSensor, GroveButton, Grove4chRelay
-from flask import Flask, render_template, redirect, request
+from flask import Flask, render_template, redirect
 
 app = Flask(__name__)
 
@@ -43,11 +43,53 @@ def button():
     button.on_release = on_release
 
 ###
+# Automatic watering
+
+# 0 = none
+# 1 = time based
+# 2 = moisture sensors
+
+
+strategy = 0
+strategy_changed = threading.Event()
+
+
+def automatic():
+    while True:
+        if strategy is 0:
+            pass
+        elif strategy is 1:
+            now = datetime.now()
+            # Water for 5 seconds every other day at 6 AM
+            if now.hour is 6 and now.day % 2 is 0:
+                relay.turn_on_all()
+                time.sleep(5)
+                relay.turn_off_all()
+        elif strategy is 2:
+            for plant in plants:
+                channel = plant[1]
+                sensor = moisture_sensors[plant[2]]
+                moisture_level = plant[3]
+                # Check if moisture level is greater than desired + buffer
+                if sensor.moisture > moisture_level + 100:
+                    relay.turn_on(channel)
+                    while sensor.moisture > moisture_level:
+                        time.sleep(1)
+                    relay.turn_off(channel)
+        relay.turn_off_all()
+        strategy_changed.wait(3600)
+        strategy_changed.clear()
+
+
+###
+
+###
 # Database
 ###
 
 
-con = sqlite3.connect('database.sqlite', detect_types=sqlite3.PARSE_DECLTYPES, check_same_thread=False)
+con = sqlite3.connect(
+    'database.sqlite', detect_types=sqlite3.PARSE_DECLTYPES, check_same_thread=False)
 cur = con.cursor()
 
 
@@ -72,6 +114,8 @@ def fetch_data(sensor_id):
 
 @app.route("/")
 def index():
+    global plants, relay, strategy
+
     now = datetime.now()
     timeString = now.strftime("%Y-%m-%d %H:%M")
 
@@ -85,6 +129,7 @@ def index():
         'time': timeString,
         'plants': plants,
         'relay_state': relay.get_state(),
+        'strategy': strategy,
         'humidity': humidity,
         'temperature': temperature,
         'light_visible': light_visible,
@@ -108,6 +153,8 @@ def index():
 
 @app.route("/channel_on/<int:channel>")
 def channel_on(channel):
+    global relay
+
     if channel is 0:
         relay.turn_on_all()
     elif channel in [1, 2, 3, 4]:
@@ -119,6 +166,8 @@ def channel_on(channel):
 
 @app.route("/channel_off/<int:channel>")
 def channel_off(channel):
+    global relay
+
     if channel is 0:
         relay.turn_off_all()
     elif channel in [1, 2, 3, 4]:
@@ -128,20 +177,16 @@ def channel_off(channel):
     return redirect('/')
 
 
-@app.route("/automatic")
-def automatic():
-    for plant in plants:
-        channel = plant[1]
-        sensor = moisture_sensors[plant[2]]
-        moisture_level = plant[3]
-        if sensor.moisture > moisture_level:
-            relay.turn_on(channel)
-            while sensor.moisture > moisture_level:
-                time.sleep(1)
-            relay.turn_off(channel)
+@app.route("/set_strategy/<int:strategy_id>")
+def set_strategy(strategy_id):
+    global strategy, strategy_changed
+
+    strategy = strategy_id
+    strategy_changed.set()
     return redirect('/')
 
 
 if __name__ == '__main__':
     threading.Thread(name='button', target=button).start()
+    threading.Thread(name='automatic', target=automatic).start()
     app.run(debug=True, port=80, host='0.0.0.0')
