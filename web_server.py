@@ -11,10 +11,10 @@ app = Flask(__name__)
 # (name, channel, moisture_sensor, moisture_level)
 # sorted by moisture sensor
 plants = [
-    ("tomato",  2, 0, 1400),
-    ("oregano", 3, 1, 1700),
-    ("basil-1", 1, 2, 1550),
-    ("basil-2", 4, 3, 1550),
+    ("tomato",  2, 0, 1350),
+    ("oregano", 3, 1, 1500),
+    ("basil-1", 1, 2, 1480),
+    ("basil-2", 4, 3, 1480),
 ]
 
 # Sensors
@@ -71,11 +71,12 @@ def automatic():
                 sensor = moisture_sensors[plant[2]]
                 moisture_level = plant[3]
                 # Check if moisture level is greater than desired + buffer
-                if sensor.moisture > moisture_level + 100:
-                    relay.turn_on(channel)
+                if sensor.moisture > moisture_level + 50:
                     while sensor.moisture > moisture_level:
+                        relay.turn_on(channel)
                         time.sleep(1)
-                    relay.turn_off(channel)
+                        relay.turn_off(channel)
+                        time.sleep(5)
         relay.turn_off_all()
         strategy_changed.wait(3600)
         strategy_changed.clear()
