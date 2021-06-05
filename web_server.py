@@ -3,7 +3,7 @@ import time
 import threading
 from datetime import datetime
 from sensors import GroveMoistureSensor, GroveHumidityTemperatureSensor, GroveLightSensor, GroveButton, Grove4chRelay
-from flask import Flask, render_template, redirect
+from flask import Flask, render_template, redirect, request
 
 app = Flask(__name__)
 
@@ -12,9 +12,9 @@ app = Flask(__name__)
 # sorted by moisture sensor
 plants = [
     ("tomato",  2, 0, 1350),
-    ("oregano", 3, 1, 1500),
-    ("basil-1", 1, 2, 1480),
-    ("basil-2", 4, 3, 1480),
+    ("oregano", 3, 1, 1550),
+    ("basil-1", 1, 2, 1400),
+    ("basil-2", 4, 3, 1400),
 ]
 
 # Sensors
@@ -96,7 +96,7 @@ cur = con.cursor()
 
 def fetch_data(sensor_id):
     cur.execute(
-        f"SELECT timestamp, value FROM data WHERE sensor_id = {sensor_id} ORDER BY timestamp")
+        f"SELECT timestamp, value FROM data WHERE sensor_id = {sensor_id} ORDER BY timestamp LIMIT 500")
     res = cur.fetchall()
 
     timestamps = []
@@ -115,7 +115,7 @@ def fetch_data(sensor_id):
 
 @app.route("/")
 def index():
-    global plants, relay, strategy
+    global plants, strategy
 
     now = datetime.now()
     timeString = now.strftime("%Y-%m-%d %H:%M")
@@ -129,7 +129,6 @@ def index():
     templateData = {
         'time': timeString,
         'plants': plants,
-        'relay_state': relay.get_state(),
         'strategy': strategy,
         'humidity': humidity,
         'temperature': temperature,
@@ -152,39 +151,39 @@ def index():
     return render_template('index.html', **templateData)
 
 
-@app.route("/channel_on/<int:channel>")
-def channel_on(channel):
+@app.route("/api/relay", methods=['POST'])
+def api_relay():
     global relay
 
-    if channel is 0:
-        relay.turn_on_all()
-    elif channel in [1, 2, 3, 4]:
-        relay.turn_on(channel)
+    ch = request.form.get("channel", type=int)
+    on = request.form.get("open", type=int)
+
+    if ch is 0:
+        if on is 0:
+            relay.turn_off_all()
+        else:
+            relay.turn_on_all()
+    elif ch in [1, 2, 3, 4]:
+        if on is 0:
+            relay.turn_off(ch)
+        else:
+            relay.turn_on(ch)
     else:
         pass
-    return redirect('/')
+
+    return ""
 
 
-@app.route("/channel_off/<int:channel>")
-def channel_off(channel):
-    global relay
-
-    if channel is 0:
-        relay.turn_off_all()
-    elif channel in [1, 2, 3, 4]:
-        relay.turn_off(channel)
-    else:
-        pass
-    return redirect('/')
-
-
-@app.route("/set_strategy/<int:strategy_id>")
-def set_strategy(strategy_id):
+@app.route("/api/strategy", methods=['POST'])
+def api_strategy():
     global strategy, strategy_changed
 
-    strategy = strategy_id
-    strategy_changed.set()
-    return redirect('/')
+    s = request.form.get("strategy", type=int)
+
+    if s in [0, 1, 2]:
+        strategy = s
+        strategy_changed.set()
+    return ""
 
 
 if __name__ == '__main__':

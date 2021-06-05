@@ -11,6 +11,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.3"></script>
     <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@0.1.1"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0"></script>
 </head>
 
 <body>
@@ -70,20 +71,19 @@
                 </div>
                 <div class="bg-light p-3 mb-4">
                     <h4>Water Channels</h4>
-                    <p>Current State: {{ relay_state }}</p>
                     <div>
                         <h5>Automatic</h5>
                         <div class="mb-4">
                             <div class="mb-2">
-                                <a class="btn btn-success w-100 {{'active' if strategy == 0 }}" role="button" href="{{ url_for('set_strategy', strategy_id=0) }}">None</a>
+                                <button id="strategy-0" class="btn btn-{{ 'outline-' if strategy != 0 }}success w-100 change-strategy">None</button>
                                 <small class="text-muted">No automatic watering.</small>
                             </div>
                             <div class="mb-2">
-                                <a class="btn btn-success w-100 {{'active' if strategy == 1 }}" role="button" href="{{ url_for('set_strategy', strategy_id=1) }}">Time</a>
+                                <button id="strategy-1" class="btn btn-{{ 'outline-' if strategy != 1 }}success w-100 change-strategy">Time</button>
                                 <small class="text-muted">Water all plants for 5 seconds every other day at 6 AM.</small>
                             </div>
                             <div class="mb-2">
-                                <a class="btn btn-success w-100 {{'active' if strategy == 2 }}" role="button" href="{{ url_for('set_strategy', strategy_id=2) }}">Moisture</a>
+                                <button id="strategy-2" class="btn btn-{{ 'outline-' if strategy != 2 }}success w-100 change-strategy">Moisture</button>
                                 <small class="text-muted">Water each plant based on set moisture level.</small>
                             </div>
                         </div>
@@ -92,17 +92,15 @@
                         <div class="my-3">
                             <div>Water {{ plant[0] }}</div>
                             <div>Moisture: {{ moisture[plant[2]] }} / {{ plant[3] }}</div>
-                            <div class="btn-group d-flex my-2" role="group" aria-label="Basic example">
-                                <a class="btn btn-success {{'disabled' if relay_state[plant[1] - 1] == 1 }}" role="button" href="{{ url_for('channel_on', channel=plant[1]) }}">On</a>
-                                <a class="btn btn-danger {{'disabled' if relay_state[plant[1] - 1] == 0 }}" role="button" href="{{ url_for('channel_off', channel=plant[1]) }}">Off</a>
-                            </div>
+                            <input type="checkbox" class="btn-check toggle-channel" id="ch-{{ plant[1] }}" autocomplete="off">
+                            <label class="btn btn-outline-success w-100" for="ch-{{ plant[1] }}">Water</label>
                         </div>
                         {%endfor%}
                         <div class="my-3 pt-2 border-top">
                             <div>Water all</div>
                             <div class="btn-group d-flex my-2" role="group" aria-label="Basic example">
-                                <a class="btn btn-success" role="button" href="{{ url_for('channel_on', channel=0) }}">On</a>
-                                <a class="btn btn-danger" role="button" href="{{ url_for('channel_off', channel=0) }}">Off</a>
+                                <button class="btn btn-success toggle-channel-all" id="ch-0-1" >On</button>
+                                <button class="btn btn-danger toggle-channel-all" id="ch-0-0" >Off</button>
                             </div>
                         </div>
                     </div>
@@ -129,6 +127,27 @@
 </html>
 
 <script>
+    $('.toggle-channel').change(function(){
+        var ch = $(this).attr('id').split("-").pop();
+        var on = $(this).prop('checked');
+
+        $.post("api/relay", { channel: +ch, open: +on });
+    });
+
+    $('.toggle-channel-all').click(function(){
+        var id = $(this).attr('id').split("-")
+        var on = id.pop();
+        var ch = id.pop();
+
+        $.post("api/relay", { channel: +ch, open: +on });
+    });
+
+    $('.change-strategy').click(function(){
+        var strategy = $(this).attr('id').split("-").pop();
+
+        $.post("api/strategy", { strategy: +strategy });
+    });
+
     var temperatureCtx = document.getElementById('temperatureCanvas').getContext('2d');
     var lightCtx = document.getElementById('lightCanvas').getContext('2d');
     var moistureCtx = document.getElementById('moistureCanvas').getContext('2d');
@@ -161,6 +180,11 @@
             animation: false,
             parsing: false,
             normalized: true,
+            elements: {
+                point:{
+                    radius: 0
+                }
+            },
             scales: {
                 xAxes: [{
                     type: 'time',
@@ -198,6 +222,15 @@
         data: {
             labels: {{ data_timestamps|safe }},
             datasets: [
+                // {
+                //     label: 'IR',
+                //     data: {{ data_light_ir|safe }},
+                //     yAxisID: 'lumens',
+                //     fill: false,
+                //     backgroundColor: '#dc3545',
+                //     borderColor: '#dc3545',
+                //     order: 2
+                // },
                 {
                     label: 'Visible',
                     data: {{ data_light_visible|safe }},
@@ -205,14 +238,7 @@
                     fill: false,
                     backgroundColor: '#0d6efd',
                     borderColor: '#0d6efd',
-                },
-                {
-                    label: 'IR',
-                    data: {{ data_light_ir|safe }},
-                    yAxisID: 'lumens',
-                    fill: false,
-                    backgroundColor: '#dc3545',
-                    borderColor: '#dc3545',
+                    order: 1
                 },
                 {
                     label: 'UV Index',
@@ -221,6 +247,7 @@
                     fill: false,
                     backgroundColor: '#6610f2',
                     borderColor: '#6610f2',
+                    order: 0
                 },
             ]
         },
@@ -229,6 +256,11 @@
             animation: false,
             parsing: false,
             normalized: true,
+            elements: {
+                point:{
+                    radius: 0
+                }
+            },
             scales: {
                 xAxes: [{
                     type: 'time',
@@ -241,8 +273,8 @@
                         id: 'lumens',
                         position: 'left',
                         ticks: {
-                            min: 0,
-                            max: 1800
+                            min: 275,
+                            max: 1000
                         },
                     },
                     {
@@ -301,6 +333,11 @@
             animation: false,
             parsing: false,
             normalized: true,
+            elements: {
+                point:{
+                    radius: 0
+                }
+            },
             scales: {
                 xAxes: [{
                     type: 'time',
