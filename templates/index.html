@@ -80,11 +80,11 @@
                             </div>
                             <div class="mb-2">
                                 <button id="strategy-1" class="btn btn-{{ 'outline-' if strategy != 1 }}success w-100 change-strategy">Time</button>
-                                <small class="text-muted">Water all plants for 5 seconds every other day at 6 AM.</small>
+                                <small class="text-muted">Water all plants for 3 seconds every other day at 6 AM.</small>
                             </div>
                             <div class="mb-2">
                                 <button id="strategy-2" class="btn btn-{{ 'outline-' if strategy != 2 }}success w-100 change-strategy">Moisture</button>
-                                <small class="text-muted">Water each plant based on set moisture level.</small>
+                                <small class="text-muted">Water each plant based on set moisture level every hour.</small>
                             </div>
                         </div>
                         <h5>Manual Controls</h5>
@@ -92,16 +92,12 @@
                         <div class="my-3">
                             <div>Water {{ plant[0] }}</div>
                             <div>Moisture: {{ moisture[plant[2]] }} / {{ plant[3] }}</div>
-                            <input type="checkbox" class="btn-check toggle-channel" id="ch-{{ plant[1] }}" autocomplete="off">
-                            <label class="btn btn-outline-success w-100" for="ch-{{ plant[1] }}">Water</label>
+                            <button class="btn btn-primary w-100 toggle-channel" id="ch-{{ plant[1] }}">Water</button>
                         </div>
                         {%endfor%}
                         <div class="my-3 pt-2 border-top">
                             <div>Water all</div>
-                            <div class="btn-group d-flex my-2" role="group" aria-label="Basic example">
-                                <button class="btn btn-success toggle-channel-all" id="ch-0-1" >On</button>
-                                <button class="btn btn-danger toggle-channel-all" id="ch-0-0" >Off</button>
-                            </div>
+                            <button class="btn btn-secondary w-100 toggle-channel" id="ch-0" >Water</button>
                         </div>
                     </div>
                 </div>
@@ -127,19 +123,11 @@
 </html>
 
 <script>
-    $('.toggle-channel').change(function(){
+    $('.toggle-channel').click(function(){
         var ch = $(this).attr('id').split("-").pop();
-        var on = $(this).prop('checked');
+        var time = 2; // in s
 
-        $.post("api/relay", { channel: +ch, open: +on });
-    });
-
-    $('.toggle-channel-all').click(function(){
-        var id = $(this).attr('id').split("-")
-        var on = id.pop();
-        var ch = id.pop();
-
-        $.post("api/relay", { channel: +ch, open: +on });
+        $.post("api/relay", { channel: +ch, duration: +time });
     });
 
     $('.change-strategy').click(function(){

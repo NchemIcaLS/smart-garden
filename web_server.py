@@ -11,10 +11,10 @@ app = Flask(__name__)
 # (name, channel, moisture_sensor, moisture_level)
 # sorted by moisture sensor
 plants = [
-    ("tomato",  2, 0, 1350),
-    ("oregano", 3, 1, 1550),
-    ("basil-1", 1, 2, 1400),
-    ("basil-2", 4, 3, 1400),
+    ("rosemary", 2, 0, 1350),
+    ("chives",   3, 1, 1300),
+    ("basil-1",  1, 2, 1280),
+    ("basil-2",  4, 3, 1280),
 ]
 
 # Sensors
@@ -63,7 +63,7 @@ def automatic():
             # Water for 5 seconds every other day at 6 AM
             if now.hour is 6 and now.day % 2 is 0:
                 relay.turn_on_all()
-                time.sleep(5)
+                time.sleep(3)
                 relay.turn_off_all()
         elif strategy is 2:
             for plant in plants:
@@ -96,7 +96,7 @@ cur = con.cursor()
 
 def fetch_data(sensor_id):
     cur.execute(
-        f"SELECT timestamp, value FROM data WHERE sensor_id = {sensor_id} ORDER BY timestamp LIMIT 500")
+        f"SELECT timestamp, value FROM data WHERE sensor_id = {sensor_id} ORDER BY timestamp DESC LIMIT 500")
     res = cur.fetchall()
 
     timestamps = []
@@ -156,20 +156,20 @@ def api_relay():
     global relay
 
     ch = request.form.get("channel", type=int)
-    on = request.form.get("open", type=int)
+    duration = request.form.get("duration", 1, type=int)
+    duration = min(1, duration)
+    duration = max(5, duration)
 
     if ch is 0:
-        if on is 0:
-            relay.turn_off_all()
-        else:
-            relay.turn_on_all()
+        relay.turn_on_all()
+        time.sleep(duration)
+        relay.turn_off_all()
     elif ch in [1, 2, 3, 4]:
-        if on is 0:
-            relay.turn_off(ch)
-        else:
-            relay.turn_on(ch)
+        relay.turn_on(ch)
+        time.sleep(duration)
+        relay.turn_off(ch)
     else:
-        pass
+        relay.turn_off_all()
 
     return ""
 
